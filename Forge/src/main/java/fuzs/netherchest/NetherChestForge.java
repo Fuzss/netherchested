@@ -1,6 +1,9 @@
 package fuzs.netherchest;
 
+import fuzs.netherchest.data.ModBlockTagsProvider;
 import fuzs.netherchest.data.ModLanguageProvider;
+import fuzs.netherchest.data.ModLootTableProvider;
+import fuzs.netherchest.data.ModRecipeProvider;
 import fuzs.puzzleslib.core.CommonFactories;
 import net.minecraft.data.DataGenerator;
 import net.minecraftforge.common.data.ExistingFileHelper;
@@ -22,6 +25,9 @@ public class NetherChestForge {
     public static void onGatherData(final GatherDataEvent evt) {
         DataGenerator dataGenerator = evt.getGenerator();
         final ExistingFileHelper fileHelper = evt.getExistingFileHelper();
+        dataGenerator.addProvider(true, new ModBlockTagsProvider(dataGenerator, NetherChest.MOD_ID, fileHelper));
         dataGenerator.addProvider(true, new ModLanguageProvider(dataGenerator, NetherChest.MOD_ID));
+        dataGenerator.addProvider(true, new ModLootTableProvider(dataGenerator, NetherChest.MOD_ID));
+        dataGenerator.addProvider(true, new ModRecipeProvider(dataGenerator));
     }
 }

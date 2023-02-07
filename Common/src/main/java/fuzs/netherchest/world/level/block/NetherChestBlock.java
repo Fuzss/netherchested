@@ -1,19 +1,26 @@
 package fuzs.netherchest.world.level.block;
 
+import fuzs.netherchest.NetherChest;
+import fuzs.netherchest.config.ServerConfig;
 import fuzs.netherchest.init.ModRegistry;
 import fuzs.netherchest.networking.UnlimitedContainerSynchronizer;
 import fuzs.netherchest.world.inventory.NetherChestMenu;
+import fuzs.netherchest.world.inventory.UnlimitedContainerUtils;
 import fuzs.netherchest.world.level.block.entity.NetherChestBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.*;
+import net.minecraft.world.Container;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.piglin.PiglinAi;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.EnderChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -47,7 +54,7 @@ public class NetherChestBlock extends EnderChestBlock {
         if (!state.is(newState.getBlock())) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof Container) {
-                Containers.dropContents(level, pos, (Container) blockEntity);
+                UnlimitedContainerUtils.dropContents(level, pos, (Container) blockEntity);
                 level.updateNeighbourForOutputSignal(pos, this);
             }
 
@@ -57,20 +64,24 @@ public class NetherChestBlock extends EnderChestBlock {
 
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if (level.isClientSide) {
-            return InteractionResult.SUCCESS;
-        } else {
-            MenuProvider menuProvider = this.getMenuProvider(state, level, pos);
-            if (menuProvider != null) {
-                OptionalInt containerId = player.openMenu(menuProvider);
-                if (containerId.isPresent() && player.containerMenu.containerId == containerId.getAsInt()) {
-                    ((NetherChestMenu) player.containerMenu).setActualSynchronizer(new UnlimitedContainerSynchronizer((ServerPlayer) player));
+        if (!level.isClientSide) {
+            BlockPos above = pos.above();
+            if (level.dimension() == Level.NETHER && NetherChest.CONFIG.get(ServerConfig.class).explodeInNether) {
+                level.removeBlock(pos, false);
+                level.explode(null, DamageSource.badRespawnPointExplosion(), null, (double) pos.getX() + 0.5D, (double) pos.getY() + 0.5D, (double) pos.getZ() + 0.5D, NetherChest.CONFIG.get(ServerConfig.class).netherExplosionStrength, true, Explosion.BlockInteraction.DESTROY);
+            } else if (!NetherChest.CONFIG.get(ServerConfig.class).noBlockAbove || !level.getBlockState(above).isRedstoneConductor(level, above)) {
+                MenuProvider menuProvider = this.getMenuProvider(state, level, pos);
+                if (menuProvider != null) {
+                    OptionalInt containerId = player.openMenu(menuProvider);
+                    if (containerId.isPresent() && player.containerMenu.containerId == containerId.getAsInt()) {
+                        ((NetherChestMenu) player.containerMenu).setActualSynchronizer(new UnlimitedContainerSynchronizer((ServerPlayer) player));
+                    }
+                    PiglinAi.angerNearbyPiglins(player, true);
                 }
-                PiglinAi.angerNearbyPiglins(player, true);
-            }
 
-            return InteractionResult.CONSUME;
+            }
         }
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override
@@ -91,7 +102,7 @@ public class NetherChestBlock extends EnderChestBlock {
 
     @Override
     public int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
-        return AbstractContainerMenu.getRedstoneSignalFromBlockEntity(level.getBlockEntity(pos));
+        return UnlimitedContainerUtils.getRedstoneSignalFromBlockEntity(level.getBlockEntity(pos));
     }
 
     @Override

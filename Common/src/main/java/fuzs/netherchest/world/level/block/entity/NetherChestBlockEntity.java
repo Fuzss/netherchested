@@ -1,12 +1,15 @@
 package fuzs.netherchest.world.level.block.entity;
 
+import fuzs.netherchest.NetherChest;
+import fuzs.netherchest.config.ServerConfig;
 import fuzs.netherchest.init.ModRegistry;
 import fuzs.netherchest.world.inventory.NetherChestMenu;
+import fuzs.netherchest.world.inventory.UnlimitedContainerUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Inventory;
@@ -19,6 +22,8 @@ import net.minecraft.world.level.block.entity.ContainerOpenersCounter;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class NetherChestBlockEntity extends ChestBlockEntity {
+    private static final MutableComponent CONTAINER_TITLE = Component.translatable("container.nether_chest");
+
     private final ContainerOpenersCounter openersCounter;
 
     public NetherChestBlockEntity(BlockPos blockPos, BlockState blockState) {
@@ -52,42 +57,6 @@ public class NetherChestBlockEntity extends ChestBlockEntity {
         };
     }
 
-    public static CompoundTag saveAllItems(CompoundTag tag, NonNullList<ItemStack> list, boolean saveEmpty) {
-        ListTag listTag = new ListTag();
-
-        for (int i = 0; i < list.size(); ++i) {
-            ItemStack itemStack = list.get(i);
-            if (!itemStack.isEmpty()) {
-                CompoundTag compoundTag = new CompoundTag();
-                compoundTag.putByte("Slot", (byte) i);
-                itemStack.save(compoundTag);
-                compoundTag.putInt("Count", itemStack.getCount());
-                listTag.add(compoundTag);
-            }
-        }
-
-        if (!listTag.isEmpty() || saveEmpty) {
-            tag.put("Items", listTag);
-        }
-
-        return tag;
-    }
-
-    public static void loadAllItems(CompoundTag tag, NonNullList<ItemStack> list) {
-        ListTag listTag = tag.getList("Items", 10);
-
-        for (int i = 0; i < listTag.size(); ++i) {
-            CompoundTag compoundTag = listTag.getCompound(i);
-            int j = compoundTag.getByte("Slot") & 255;
-            if (j >= 0 && j < list.size()) {
-                ItemStack itemStack = ItemStack.of(compoundTag);
-                itemStack.setCount(compoundTag.getInt("Count"));
-                list.set(j, itemStack);
-            }
-        }
-
-    }
-
     @Override
     public int getContainerSize() {
         return 54;
@@ -95,12 +64,12 @@ public class NetherChestBlockEntity extends ChestBlockEntity {
 
     @Override
     protected Component getDefaultName() {
-        return Component.translatable("container.nether_chest");
+        return CONTAINER_TITLE;
     }
 
     @Override
     public int getMaxStackSize() {
-        return super.getMaxStackSize() * 8;
+        return super.getMaxStackSize() * NetherChest.CONFIG.get(ServerConfig.class).stackSizeMultiplier;
     }
 
     @Override
@@ -108,7 +77,7 @@ public class NetherChestBlockEntity extends ChestBlockEntity {
         super.load(tag);
         this.setItems(NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY));
         if (!this.tryLoadLootTable(tag)) {
-            loadAllItems(tag, this.getItems());
+            UnlimitedContainerUtils.loadAllItems(tag, this.getItems());
         }
 
     }
@@ -118,7 +87,7 @@ public class NetherChestBlockEntity extends ChestBlockEntity {
         super.saveAdditional(tag);
         tag.remove("Items");
         if (!this.trySaveLootTable(tag)) {
-            saveAllItems(tag, this.getItems(), true);
+            UnlimitedContainerUtils.saveAllItems(tag, this.getItems(), true);
         }
     }
 

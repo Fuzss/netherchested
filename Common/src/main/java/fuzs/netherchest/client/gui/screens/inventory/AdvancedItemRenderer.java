@@ -100,13 +100,9 @@ public class AdvancedItemRenderer {
                 RenderSystem.enableTexture();
                 RenderSystem.enableDepthTest();
             }
-
         }
     }
 
-    /**
-     * Draw with the WorldRenderer
-     */
     private static void fillRect(BufferBuilder renderer, int x, int y, int width, int height, int red, int green, int blue, int alpha) {
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
         renderer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);

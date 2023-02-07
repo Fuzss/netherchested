@@ -1,14 +1,13 @@
 package fuzs.netherchest.client.gui.screens.inventory;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.datafixers.util.Pair;
 import fuzs.netherchest.NetherChest;
 import fuzs.netherchest.networking.ServerboundContainerClickMessage;
-import fuzs.netherchest.world.inventory.NetherChestMenu;
+import fuzs.netherchest.world.inventory.UnlimitedContainerUtils;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.ChatFormatting;
@@ -30,55 +29,9 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
-
-    /**
-     * The location of the inventory background texture
-     */
-    public static final ResourceLocation INVENTORY_LOCATION = new ResourceLocation("textures/gui/container/inventory.png");
-    public static final int SLOT_ITEM_BLIT_OFFSET = 100;
-    private static final float SNAPBACK_SPEED = 100.0F;
-    private static final int QUICKDROP_DELAY = 500;
-    private static final int HOVER_ITEM_BLIT_OFFSET = 200;
-    /**
-     * A list of the players inventory slots
-     */
-    protected final T menu;
-    protected final Component playerInventoryTitle;
-    protected final Set<Slot> quickCraftSlots = Sets.<Slot>newHashSet();
-    /**
-     * The X size of the inventory window in pixels.
-     */
-    protected int imageWidth = 176;
-    /**
-     * The Y size of the inventory window in pixels.
-     */
-    protected int imageHeight = 166;
-    protected int titleLabelX;
-    protected int titleLabelY;
-    protected int inventoryLabelX;
-    protected int inventoryLabelY;
-    /**
-     * Holds the slot currently hovered
-     */
-    @Nullable
-    protected Slot hoveredSlot;
-    /**
-     * Starting X position for the Gui. Inconsistent use for Gui backgrounds.
-     */
-    protected int leftPos;
-    /**
-     * Starting Y position for the Gui. Inconsistent use for Gui backgrounds.
-     */
-    protected int topPos;
-    protected boolean isQuickCrafting;
-    /**
-     * Used when touchscreen is enabled
-     */
     @Nullable
     private Slot clickedSlot;
     @Nullable
@@ -87,20 +40,11 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
     private Slot quickdropSlot;
     @Nullable
     private Slot lastClickSlot;
-    /**
-     * Used when touchscreen is enabled.
-     */
     private boolean isSplittingStack;
-    /**
-     * Used when touchscreen is enabled
-     */
     private ItemStack draggingItem = ItemStack.EMPTY;
     private int snapbackStartX;
     private int snapbackStartY;
     private long snapbackTime;
-    /**
-     * Used when touchscreen is enabled
-     */
     private ItemStack snapbackItem = ItemStack.EMPTY;
     private long quickdropTime;
     private int quickCraftingType;
@@ -114,8 +58,6 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
 
     public UnlimitedContainerScreen(T abstractContainerMenu, Inventory inventory, Component component) {
         super(abstractContainerMenu, inventory, component);
-        this.menu = abstractContainerMenu;
-        this.playerInventoryTitle = inventory.getDisplayName();
         this.skipNextRelease = true;
         this.titleLabelX = 8;
         this.titleLabelY = 6;
@@ -147,7 +89,7 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
 //        super.render(poseStack, mouseX, mouseY, partialTick);
         PoseStack poseStack2 = RenderSystem.getModelViewStack();
         poseStack2.pushPose();
-        poseStack2.translate((double) i, (double) j, 0.0);
+        poseStack2.translate(i, j, 0.0);
         RenderSystem.applyModelViewMatrix();
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         this.hoveredSlot = null;
@@ -160,7 +102,7 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
                 this.renderSlot(poseStack, slot);
             }
 
-            if (this.isHovering(slot, (double) mouseX, (double) mouseY) && slot.isActive()) {
+            if (this.isHovering(slot, mouseX, mouseY) && slot.isActive()) {
                 this.hoveredSlot = slot;
                 int l = slot.x;
                 int m = slot.y;
@@ -207,6 +149,7 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
         RenderSystem.enableDepthTest();
     }
 
+    @Override
     protected void renderTooltip(PoseStack poseStack, int x, int y) {
         if (this.menu.getCarried().isEmpty() && this.hoveredSlot != null && this.hoveredSlot.hasItem()) {
             this.renderTooltip(poseStack, this.hoveredSlot.getItem(), x, y);
@@ -214,17 +157,13 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
 
     }
 
+    @Override
     protected void renderTooltip(PoseStack poseStack, ItemStack itemStack, int mouseX, int mouseY) {
         List<Component> tooltipFromItem = this.getTooltipFromItem(itemStack);
         AdvancedItemRenderer.getStackSizeComponent(itemStack).ifPresent(component -> tooltipFromItem.add(1, component));
         this.renderTooltip(poseStack, tooltipFromItem, itemStack.getTooltipImage(), mouseX, mouseY);
     }
 
-    /**
-     * Draws an ItemStack.
-     * <p>
-     * The z index is increased by 32 (and not decreased afterwards), and the item is then rendered at z=200.
-     */
     private void renderFloatingItem(ItemStack stack, int x, int y, Style altText) {
         PoseStack poseStack = RenderSystem.getModelViewStack();
         poseStack.translate(0.0, 0.0, 32.0);
@@ -237,11 +176,13 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
         this.itemRenderer.blitOffset = 0.0F;
     }
 
+    @Override
     protected void renderLabels(PoseStack poseStack, int mouseX, int mouseY) {
         this.font.draw(poseStack, this.title, (float) this.titleLabelX, (float) this.titleLabelY, 4210752);
         this.font.draw(poseStack, this.playerInventoryTitle, (float) this.inventoryLabelX, (float) this.inventoryLabelY, 4210752);
     }
 
+    @Override
     protected abstract void renderBg(PoseStack poseStack, float partialTick, int mouseX, int mouseY);
 
     private void renderSlot(PoseStack poseStack, Slot slot) {
@@ -260,10 +201,10 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
                 return;
             }
 
-            if (NetherChestMenu.canItemQuickReplace(slot, itemStack2, true) && this.menu.canDragTo(slot)) {
+            if (UnlimitedContainerUtils.canItemQuickReplace(slot, itemStack2, true) && this.menu.canDragTo(slot)) {
                 itemStack = itemStack2.copy();
                 bl = true;
-                NetherChestMenu.getQuickCraftSlotCount(this.quickCraftSlots, this.quickCraftingType, itemStack, slot.getItem().isEmpty() ? 0 : slot.getItem().getCount(), slot);
+                UnlimitedContainerUtils.getQuickCraftSlotCount(this.quickCraftSlots, this.quickCraftingType, itemStack, slot.getItem().isEmpty() ? 0 : slot.getItem().getCount(), slot);
                 int k = slot.getMaxStackSize(itemStack);
                 if (itemStack.getCount() > k) {
                     string = string.withColor(ChatFormatting.YELLOW);
@@ -280,7 +221,7 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
         if (itemStack.isEmpty() && slot.isActive()) {
             Pair<ResourceLocation, ResourceLocation> pair = slot.getNoItemIcon();
             if (pair != null) {
-                TextureAtlasSprite textureAtlasSprite = (TextureAtlasSprite) this.minecraft.getTextureAtlas(pair.getFirst()).apply(pair.getSecond());
+                TextureAtlasSprite textureAtlasSprite = this.minecraft.getTextureAtlas(pair.getFirst()).apply(pair.getSecond());
                 RenderSystem.setShaderTexture(0, textureAtlasSprite.atlas().location());
                 blit(poseStack, i, j, this.getBlitOffset(), 16, 16, textureAtlasSprite);
                 bl2 = true;
@@ -313,7 +254,7 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
                     ItemStack itemStack2 = itemStack.copy();
                     ItemStack itemStack3 = slot.getItem();
                     int i = itemStack3.isEmpty() ? 0 : itemStack3.getCount();
-                    NetherChestMenu.getQuickCraftSlotCount(this.quickCraftSlots, this.quickCraftingType, itemStack2, i, slot);
+                    UnlimitedContainerUtils.getQuickCraftSlotCount(this.quickCraftSlots, this.quickCraftingType, itemStack2, i, slot);
                     int j = slot.getMaxStackSize(itemStack2);
                     if (itemStack2.getCount() > j) {
                         itemStack2.setCount(j);
@@ -427,9 +368,9 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
                 }
             }
         }
-
     }
 
+    @Override
     protected boolean hasClickedOutside(double mouseX, double mouseY, int guiLeft, int guiTop, int mouseButton) {
         return mouseX < (double) guiLeft || mouseY < (double) guiTop || mouseX >= (double) (guiLeft + this.imageWidth) || mouseY >= (double) (guiTop + this.imageHeight);
     }
@@ -444,7 +385,7 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
                     if (slot != this.clickedSlot && !this.clickedSlot.getItem().isEmpty()) {
                         this.draggingItem = this.clickedSlot.getItem().copy();
                     }
-                } else if (this.draggingItem.getCount() > 1 && slot != null && NetherChestMenu.canItemQuickReplace(slot, this.draggingItem, false)) {
+                } else if (this.draggingItem.getCount() > 1 && slot != null && UnlimitedContainerUtils.canItemQuickReplace(slot, this.draggingItem, false)) {
                     long l = Util.getMillis();
                     if (this.quickdropSlot == slot) {
                         if (l - this.quickdropTime > 500L) {
@@ -460,7 +401,7 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
                     }
                 }
             }
-        } else if (this.isQuickCrafting && slot != null && !itemStack.isEmpty() && (itemStack.getCount() > this.quickCraftSlots.size() || this.quickCraftingType == 2) && NetherChestMenu.canItemQuickReplace(slot, itemStack, true) && slot.mayPlace(itemStack) && this.menu.canDragTo(slot)) {
+        } else if (this.isQuickCrafting && slot != null && !itemStack.isEmpty() && (itemStack.getCount() > this.quickCraftSlots.size() || this.quickCraftingType == 2) && UnlimitedContainerUtils.canItemQuickReplace(slot, itemStack, true) && slot.mayPlace(itemStack) && this.menu.canDragTo(slot)) {
             this.quickCraftSlots.add(slot);
             this.recalculateQuickCraftRemaining(slot);
         }
@@ -487,7 +428,7 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
             if (hasShiftDown()) {
                 if (!this.lastQuickMoved.isEmpty()) {
                     for (Slot slot2 : this.menu.slots) {
-                        if (slot2 != null && slot2.mayPickup(this.minecraft.player) && slot2.hasItem() && slot2.container == slot.container && NetherChestMenu.canItemQuickReplace(slot2, this.lastQuickMoved, true)) {
+                        if (slot2 != null && slot2.mayPickup(this.minecraft.player) && slot2.hasItem() && slot2.container == slot.container && UnlimitedContainerUtils.canItemQuickReplace(slot2, this.lastQuickMoved, true)) {
                             this.slotClicked(slot2, slot2.index, button, ClickType.QUICK_MOVE);
                         }
                     }
@@ -517,7 +458,7 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
                         this.draggingItem = this.clickedSlot.getItem();
                     }
 
-                    boolean bl2 = NetherChestMenu.canItemQuickReplace(slot, this.draggingItem, false);
+                    boolean bl2 = UnlimitedContainerUtils.canItemQuickReplace(slot, this.draggingItem, false);
                     if (k != -1 && !this.draggingItem.isEmpty() && bl2) {
                         this.slotClicked(this.clickedSlot, this.clickedSlot.index, button, ClickType.PICKUP);
                         this.slotClicked(slot, k, 0, ClickType.PICKUP);
@@ -571,6 +512,7 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
         return true;
     }
 
+    @Override
     public void clearDraggingState() {
         this.draggingItem = ItemStack.EMPTY;
         this.clickedSlot = null;
@@ -580,14 +522,16 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
         return this.isHovering(slot.x, slot.y, 16, 16, mouseX, mouseY);
     }
 
+    @Override
     protected boolean isHovering(int x, int y, int width, int height, double mouseX, double mouseY) {
         int i = this.leftPos;
         int j = this.topPos;
-        mouseX -= (double) i;
-        mouseY -= (double) j;
+        mouseX -= i;
+        mouseY -= j;
         return mouseX >= (double) (x - 1) && mouseX < (double) (x + width + 1) && mouseY >= (double) (y - 1) && mouseY < (double) (y + height + 1);
     }
 
+    @Override
     protected void slotClicked(Slot slot, int slotId, int mouseButton, ClickType type) {
         if (slot != null) {
             slotId = slot.index;
@@ -613,8 +557,8 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
             Int2ObjectMap<ItemStack> int2ObjectMap = new Int2ObjectOpenHashMap<>();
 
             for (int j = 0; j < i; ++j) {
-                ItemStack itemStack = (ItemStack) list.get(j);
-                ItemStack itemStack2 = ((Slot) nonNullList.get(j)).getItem();
+                ItemStack itemStack = list.get(j);
+                ItemStack itemStack2 = nonNullList.get(j).getItem();
                 if (!ItemStack.matches(itemStack, itemStack2)) {
                     int2ObjectMap.put(j, itemStack2.copy());
                 }
@@ -653,6 +597,7 @@ public abstract class UnlimitedContainerScreen<T extends AbstractContainerMenu> 
         }
     }
 
+    @Override
     protected boolean checkHotbarKeyPressed(int keyCode, int scanCode) {
         if (this.menu.getCarried().isEmpty() && this.hoveredSlot != null) {
             if (this.minecraft.options.keySwapOffhand.matches(keyCode, scanCode)) {
