@@ -14,7 +14,6 @@ import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.blockentity.ChestRenderer;
 import net.minecraft.client.resources.model.Material;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.item.ItemStack;
 
@@ -33,7 +32,7 @@ public class NetherChestClient implements ClientModConstructor {
 
     @Override
     public void onRegisterBuiltinModelItemRenderers(BuiltinModelItemRendererContext context) {
-        context.register(ModRegistry.NETHER_CHEST_BLOCK.get(), new DynamicBuiltinModelItemRenderer() {
+        context.registerItemRenderer(ModRegistry.NETHER_CHEST_BLOCK.get(), new DynamicBuiltinModelItemRenderer() {
             private NetherChestBlockEntity netherChest;
 
             @Override
