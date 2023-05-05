@@ -17,6 +17,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.Objects;
+
 public class NetherChestClient implements ClientModConstructor {
     public static final Material NETHER_CHEST_LOCATION = new Material(Sheets.CHEST_SHEET, NetherChest.id("entity/chest/nether"));
 
@@ -37,6 +39,7 @@ public class NetherChestClient implements ClientModConstructor {
 
             @Override
             public void renderByItem(ItemStack stack, ItemTransforms.TransformType mode, PoseStack matrices, MultiBufferSource vertexConsumers, int light, int overlay) {
+                Objects.requireNonNull(this.netherChest, "nether chest is null");
                 Minecraft.getInstance().getBlockEntityRenderDispatcher().renderItem(this.netherChest, matrices, vertexConsumers, light, overlay);
             }
 

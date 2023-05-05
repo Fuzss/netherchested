@@ -8,7 +8,7 @@ public class ServerConfig implements ConfigCore {
     @Config.IntRange(min = 1, max = 32)
     public int stackSizeMultiplier = 8;
     @Config(description = "Explode a nether chest when it is trying to be opened in the nether dimension.")
-    public boolean explodeInNether = true;
+    public boolean explodeInNether = false;
     @Config(description = "Strength of the explosion when a nether chest is trying to be opened in the nether dimension.")
     @Config.DoubleRange(min = 1, max = 10)
     public int netherExplosionStrength = 5;
