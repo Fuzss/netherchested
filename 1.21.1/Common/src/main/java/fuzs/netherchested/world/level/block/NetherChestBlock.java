@@ -5,9 +5,7 @@ import fuzs.limitlesscontainers.api.limitlesscontainers.v1.LimitlessContainerUti
 import fuzs.netherchested.NetherChested;
 import fuzs.netherchested.config.ServerConfig;
 import fuzs.netherchested.init.ModRegistry;
-import fuzs.netherchested.world.level.block.entity.NamedBlockEntity;
 import fuzs.netherchested.world.level.block.entity.NetherChestBlockEntity;
-import fuzs.puzzleslib.api.block.v1.entity.BlockEntityHelper;
 import fuzs.puzzleslib.api.block.v1.entity.TickingEntityBlock;
 import fuzs.puzzleslib.api.core.v1.Proxy;
 import net.minecraft.ChatFormatting;
@@ -19,7 +17,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.piglin.PiglinAi;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -41,11 +38,6 @@ public class NetherChestBlock extends EnderChestBlock implements TickingEntityBl
 
     public NetherChestBlock(Properties properties) {
         super(properties);
-    }
-
-    @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
-        BlockEntityHelper.setCustomName(stack, level, pos, NetherChestBlockEntity.class, NamedBlockEntity::setCustomName);
     }
 
     @Override
