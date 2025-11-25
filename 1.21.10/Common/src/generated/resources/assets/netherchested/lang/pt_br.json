@@ -1,0 +1,5 @@
+{
+  "block.netherchested.nether_chest": "Baú do Nether",
+  "block.netherchested.nether_chest.description": "Permite armazenar muito mais itens em um único slot do que qualquer outro inventário.",
+  "container.nether_chest": "Baú do Nether"
+}
